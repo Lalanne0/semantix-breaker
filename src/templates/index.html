@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Semantix Breaker</title>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Local CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header Section -->
+        <header>
+            <h1 class="gradient-text">Semantix</h1>
+            <p class="subtitle">The Semantic Word Guessing Game</p>
+        </header>
+
+        <!-- Main Game Area -->
+        <main>
+            <!-- Input Area -->
+            <section class="input-section glass-panel">
+                <form id="guess-form">
+                    <input 
+                        type="text" 
+                        id="guess-input" 
+                        placeholder="Type a word..." 
+                        autocomplete="off"
+                        autofocus
+                        required
+                    />
+                    <button type="submit" id="guess-button">Guess</button>
+                    <button type="button" id="hint-button" class="secondary-btn" title="Get a hint word">💡 Hint</button>
+                </form>
+                <div id="message-area" class="message hidden"></div>
+            </section>
+
+            <!-- Victory Screen (Hidden by default) -->
+            <section id="victory-screen" class="victory-section glass-panel hidden">
+                <div class="victory-content">
+                    <div class="trophy">🏆</div>
+                    <h2>Congratulations!</h2>
+                    <p>You found the hidden word: <span id="winning-word" class="highlight"></span></p>
+                    <button id="new-game-button" class="primary-btn">Play Again</button>
+                </div>
+            </section>
+
+            <!-- History Section -->
+            <section class="history-section">
+                <div class="history-header">
+                    <h3>Your Guesses (<span id="guess-count">0</span>)</h3>
+                    <span class="temp-indicator">Temperature (°C)</span>
+                </div>
+                
+                <div id="guesses-list" class="guesses-container">
+                    <!-- Guesses will be injected here via JS -->
+                </div>
+            </section>
+        </main>
+        
+        <!-- Loading Overlay -->
+        <div id="loading-overlay" class="loading-overlay">
+            <div class="spinner"></div>
+            <p>Initializing Semantix Engine...</p>
+        </div>
+    </div>
+
+    <!-- Local JS -->
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

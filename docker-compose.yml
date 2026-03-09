@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  semantix:
+    build: .
+    container_name: semantix-game
+    ports:
+      - "5005:5005"
+    environment:
+      - FLASK_ENV=production
+      - SECRET_KEY=semantix-secure-key-for-session
+    restart: unless-stopped
