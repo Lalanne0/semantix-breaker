@@ -1,6 +1,6 @@
 import os
 from flask import Flask, render_template, request, jsonify, session
-from model_loader import game_instance
+from model_loader import game_instances
 
 app = Flask(__name__)
 # In production, use a secure secret key from environment variables
@@ -12,14 +12,20 @@ def index():
 
 @app.route('/api/start', methods=['POST'])
 def start_game():
-    target_word = game_instance.get_random_word()
+    data = request.get_json() or {}
+    lang = data.get('lang', 'en')
+    
+    game = game_instances.get(lang, game_instances['en'])
+    target_word = game.get_random_word()
+    
     session['target_word'] = target_word
+    session['lang'] = lang
     # Clear the previous guess history if it was stored
     session['guess_history'] = []
     
     # We do not return the target word. We only confirm success.
     # In a real secure app, we wouldn't show the word in plain text in logs.
-    print(f"DEBUG: New target word initialized: {target_word}")
+    print(f"DEBUG: New target word initialized ({lang}): {target_word}")
     
     return jsonify({
         "status": "success",
@@ -44,11 +50,14 @@ def guess_word():
         return jsonify({"status": "error", "message": "Word cannot be empty."}), 400
 
     # Ensure it's in the vocabulary
-    if not game_instance.is_valid_word(guessed_word):
+    lang = session.get('lang', 'en')
+    game = game_instances.get(lang, game_instances['en'])
+    
+    if not game.is_valid_word(guessed_word):
         return jsonify({"status": "error", "message": f"'{guessed_word}' not found in dictionary."}), 400
 
     # Calculate similarity
-    similarity = game_instance.get_similarity(guessed_word, target)
+    similarity = game.get_similarity(guessed_word, target)
     
     if similarity is None:
         return jsonify({"status": "error", "message": f"Could not calculate similarity for '{guessed_word}'."}), 400
@@ -76,9 +85,11 @@ def get_hint():
         return jsonify({"status": "error", "message": "No active game."}), 400
         
     target = session['target_word']
+    lang = session.get('lang', 'en')
     previous_guesses = session.get('guess_history', [])
     
-    hint_word = game_instance.get_hint(target, previous_guesses)
+    game = game_instances.get(lang, game_instances['en'])
+    hint_word = game.get_hint(target, previous_guesses)
     
     if not hint_word:
         return jsonify({"status": "error", "message": "Could not generate a hint."}), 500
@@ -88,6 +99,26 @@ def get_hint():
         "hint": hint_word
     })
 
+@app.route('/api/crack/suggest', methods=['POST'])
+def crack_suggest():
+    data = request.get_json()
+    if not data or 'history' not in data:
+        return jsonify({"status": "error", "message": "Missing 'history' array in JSON body."}), 400
+        
+    history = data['history']
+    lang = data.get('lang', 'en')
+    
+    if not isinstance(history, list):
+         return jsonify({"status": "error", "message": "'history' must be an array."}), 400
+         
+    game = game_instances.get(lang, game_instances['en'])
+    suggestions = game.get_crack_suggestions(history)
+    
+    return jsonify({
+        "status": "success",
+        "suggestions": suggestions
+    })
+
 if __name__ == '__main__':
     # Run the app locally over port 5005
-    app.run(host='0.0.0.0', port=5005, debug=True)
+    app.run(host='0.0.0.0', port=5005, debug=True, use_reloader=False)

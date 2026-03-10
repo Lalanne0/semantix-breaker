@@ -19,8 +19,30 @@
             <p class="subtitle">The Semantic Word Guessing Game</p>
         </header>
 
-        <!-- Main Game Area -->
-        <main>
+        <!-- Menu Layout -->
+        <main id="menu-layout" class="menu-layout">
+            <section class="menu-section glass-panel">
+                <h2>Select Game Mode</h2>
+                <p>Choose to play normally or let the AI help you crack the game.</p>
+                <div class="menu-buttons">
+                    <button id="mode-play-btn" class="primary-btn">Play Game</button>
+                    <button id="mode-crack-btn" class="secondary-btn">Crack the Game</button>
+                </div>
+                <div class="language-selection">
+                    <label for="language-select">Language:</label>
+                    <select id="language-select">
+                        <option value="en" selected>English</option>
+                        <option value="fr">Français</option>
+                    </select>
+                </div>
+            </section>
+        </main>
+
+        <!-- Play Mode Layout -->
+        <main id="play-layout" class="hidden">
+            <div class="back-nav">
+                <button id="play-back-btn" class="back-btn">← Menu</button>
+            </div>
             <!-- Input Area -->
             <section class="input-section glass-panel">
                 <form id="guess-form">
@@ -29,7 +51,6 @@
                         id="guess-input" 
                         placeholder="Type a word..." 
                         autocomplete="off"
-                        autofocus
                         required
                     />
                     <button type="submit" id="guess-button">Guess</button>
@@ -57,6 +78,44 @@
                 
                 <div id="guesses-list" class="guesses-container">
                     <!-- Guesses will be injected here via JS -->
+                </div>
+            </section>
+        </main>
+
+        <!-- Crack Mode Layout -->
+        <main id="crack-layout" class="hidden">
+            <div class="back-nav">
+                <button id="crack-back-btn" class="back-btn">← Menu</button>
+            </div>
+            
+            <section class="input-section glass-panel">
+                <h3>Enter Guessed Results</h3>
+                <p style="font-size: 0.9em; color: var(--text-secondary); margin-bottom: 1rem;">Enter words you've guessed and the temperature you received. We'll find the hidden word for you.</p>
+                <form id="crack-form" class="crack-form">
+                    <input type="text" id="crack-word" placeholder="Word" autocomplete="off" required />
+                    <input type="number" id="crack-temp" placeholder="Temp °C" step="0.01" required />
+                    <button type="submit" id="crack-add-btn">Add Data</button>
+                </form>
+                <div id="crack-message-area" class="message hidden"></div>
+                <div style="margin-top: 10px; text-align: center;">
+                    <button type="button" id="crack-reset-btn" class="back-btn" style="background: transparent; color: var(--error-color);">Reset Data</button>
+                </div>
+            </section>
+            
+            <section class="suggestions-section glass-panel">
+                <h3>Top Suggestions</h3>
+                <div id="crack-suggestions" class="suggestions-container">
+                    <!-- Suggested words will go here -->
+                </div>
+            </section>
+
+            <section class="history-section history-crack">
+                <div class="history-header">
+                    <h3>Known Data (<span id="crack-count">0</span>)</h3>
+                    <span class="temp-indicator">Temperature (°C)</span>
+                </div>
+                <div id="crack-list" class="guesses-container">
+                    <!-- Crack history will be injected here via JS -->
                 </div>
             </section>
         </main>

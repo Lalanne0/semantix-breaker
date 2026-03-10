@@ -1,5 +1,16 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // DOM Elements
+    // View Containers
+    const menuLayout = document.getElementById('menu-layout');
+    const playLayout = document.getElementById('play-layout');
+    const crackLayout = document.getElementById('crack-layout');
+    
+    // Menu Buttons
+    const modePlayBtn = document.getElementById('mode-play-btn');
+    const modeCrackBtn = document.getElementById('mode-crack-btn');
+    const playBackBtn = document.getElementById('play-back-btn');
+    const crackBackBtn = document.getElementById('crack-back-btn');
+
+    // Play Mode Elements
     const form = document.getElementById('guess-form');
     const input = document.getElementById('guess-input');
     const submitBtn = document.getElementById('guess-button');
@@ -10,11 +21,26 @@ document.addEventListener('DOMContentLoaded', () => {
     const victoryScreen = document.getElementById('victory-screen');
     const winningWordSpan = document.getElementById('winning-word');
     const newGameBtn = document.getElementById('new-game-button');
+    
+    // Crack Mode Elements
+    const crackForm = document.getElementById('crack-form');
+    const crackWordInput = document.getElementById('crack-word');
+    const crackTempInput = document.getElementById('crack-temp');
+    const crackAddBtn = document.getElementById('crack-add-btn');
+    const crackMessageArea = document.getElementById('crack-message-area');
+    const crackSuggestionsContainer = document.getElementById('crack-suggestions');
+    const crackList = document.getElementById('crack-list');
+    const crackCountSpan = document.getElementById('crack-count');
+    const crackResetBtn = document.getElementById('crack-reset-btn');
+
     const loadingOverlay = document.getElementById('loading-overlay');
 
     // State
+    let currentMode = 'menu'; // menu | play | crack
+    let currentLang = 'en'; // default language
     let guesses = [];
     let isGameWon = false;
+    let crackHistory = [];
 
     // Initialize Game
     async function startGame() {
@@ -22,7 +48,8 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const response = await fetch('/api/start', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ lang: currentLang })
             });
             const data = await response.json();
             
@@ -241,6 +268,156 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Start immediately
-    startGame();
+    // --- VIEW MANAGEMENT ---
+    function switchMode(mode) {
+        currentMode = mode;
+        menuLayout.classList.add('hidden');
+        playLayout.classList.add('hidden');
+        crackLayout.classList.add('hidden');
+
+        if (mode === 'menu') {
+            menuLayout.classList.remove('hidden');
+        } else if (mode === 'play') {
+            playLayout.classList.remove('hidden');
+            startGame();
+        } else if (mode === 'crack') {
+            crackLayout.classList.remove('hidden');
+            initCrackMode();
+        }
+    }
+
+    const languageSelect = document.getElementById('language-select');
+    languageSelect.addEventListener('change', (e) => {
+        currentLang = e.target.value;
+    });
+
+    modePlayBtn.addEventListener('click', () => switchMode('play'));
+    modeCrackBtn.addEventListener('click', () => switchMode('crack'));
+    playBackBtn.addEventListener('click', () => switchMode('menu'));
+    crackBackBtn.addEventListener('click', () => switchMode('menu'));
+
+    // --- CRACK MODE LOGIC ---
+    async function initCrackMode() {
+        crackHistory = [];
+        updateCrackUI();
+        await fetchCrackSuggestions();
+        setTimeout(() => crackWordInput.focus(), 100);
+    }
+
+    crackResetBtn.addEventListener('click', () => {
+        initCrackMode();
+    });
+
+    crackForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const word = crackWordInput.value.trim().toLowerCase();
+        const temp = parseFloat(crackTempInput.value);
+        
+        if (!word || isNaN(temp)) return;
+        
+        if (crackHistory.some(h => h.word === word)) {
+            showCrackError(`You already added '${word}'!`);
+            return;
+        }
+
+        hideCrackMessage();
+        crackWordInput.disabled = true;
+        crackTempInput.disabled = true;
+        crackAddBtn.disabled = true;
+        showLoading(true);
+
+        try {
+            // Add to history
+            crackHistory.push({ word, temperature: temp });
+            // Sort history by reverse temperature for UI display
+            crackHistory.sort((a, b) => b.temperature - a.temperature);
+            
+            updateCrackUI();
+            await fetchCrackSuggestions();
+        } finally {
+            showLoading(false);
+            crackWordInput.disabled = false;
+            crackTempInput.disabled = false;
+            crackAddBtn.disabled = false;
+            crackWordInput.value = '';
+            crackTempInput.value = '';
+            crackWordInput.focus();
+        }
+    });
+
+    async function fetchCrackSuggestions() {
+        try {
+            const response = await fetch('/api/crack/suggest', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ history: crackHistory, lang: currentLang })
+            });
+            const data = await response.json();
+            
+            crackSuggestionsContainer.innerHTML = '';
+            
+            if (data.status === 'success' && data.suggestions) {
+                data.suggestions.forEach(suggestion => {
+                    const el = document.createElement('div');
+                    el.className = 'suggestion-item';
+                    el.textContent = suggestion;
+                    
+                    // Allow clicking a suggestion to auto-fill input
+                    el.addEventListener('click', () => {
+                        crackWordInput.value = suggestion;
+                        crackTempInput.focus();
+                    });
+                    
+                    crackSuggestionsContainer.appendChild(el);
+                });
+            }
+        } catch (error) {
+            console.error('Error fetching suggestions:', error);
+            showCrackError('Failed to fetch suggestions.');
+        }
+    }
+
+    function updateCrackUI() {
+        crackCountSpan.textContent = crackHistory.length;
+        crackList.innerHTML = '';
+        
+        crackHistory.forEach(item => {
+            const card = document.createElement('div');
+            card.className = 'guess-card';
+            
+            let percentage = ((item.temperature + 100) / 200) * 100;
+            percentage = Math.max(0, Math.min(100, percentage));
+            
+            let colorVar = 'var(--temp-ice)';
+            if (item.temperature > 80) colorVar = 'var(--temp-hot)';
+            else if (item.temperature > 40) colorVar = 'var(--temp-warm)';
+            else if (item.temperature > -20) colorVar = '#a371f7';
+            
+            card.innerHTML = `
+                <div class="guess-info">
+                    <span class="guess-word" style="color: var(--text-primary)">${item.word}</span>
+                    <span class="guess-temp" style="color: ${colorVar}">${item.temperature.toFixed(2)} °C</span>
+                </div>
+                <div class="temp-bar-bg">
+                    <div class="temp-bar-fill" style="width: ${percentage}%; background: ${colorVar}"></div>
+                </div>
+            `;
+            crackList.appendChild(card);
+        });
+    }
+
+    function showCrackError(msg) {
+        crackMessageArea.textContent = msg;
+        crackMessageArea.className = 'message error';
+        crackMessageArea.classList.remove('hidden');
+    }
+
+    function hideCrackMessage() {
+        crackMessageArea.classList.add('hidden');
+    }
+
+    // Rather than start game automatically, display the menu layout.
+    // The HTML sets up the correct visibility out of the box.
+    showLoading(false);
 });

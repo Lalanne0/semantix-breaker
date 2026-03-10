@@ -2,28 +2,93 @@ import os
 import random
 import numpy as np
 import gensim.downloader as api
+import spacy
 from flask import current_app
 
 class WordEmbeddingGame:
-    def __init__(self):
-        print("Loading GloVe model (glove-wiki-gigaword-50)... This might take a moment on first run.")
-        self.model = api.load("glove-wiki-gigaword-50")
-        print("Model loaded successfully.")
+    def __init__(self, lang='en'):
+        self.lang = lang
         
-        # We filter the vocabulary to only include standard alphabetical lowercase words.
-        # This prevents the game from picking obscure symbols, numbers, or very rare words as targets.
-        self.vocab = [word for word in self.model.index_to_key if word.isalpha() and word.islower()]
+        if lang == 'fr':
+            print("Loading French Embedding model...")
+            model_path = os.path.join(os.path.dirname(__file__), "fr_model.kv")
+            if os.path.exists(model_path):
+                from gensim.models import KeyedVectors
+                self.model = KeyedVectors.load(model_path)
+                print("French Model loaded successfully.")
+                print("French Model loaded successfully.")
+                self._build_vocab()
+            else:
+                print("WARNING: French model not found. Falling back to English.")
+                self.lang = 'en'
         
-        # We keep a smaller pool of very common words for the "hidden word" to ensure the game is playable.
-        # The top 5000 English words in the GloVe model are generally well-known.
-        # We skip the first 50 words as they are often stopwords (the, of, to, and...)
-        self.target_pool = self.vocab[50:5000]
+        if self.lang == 'en':
+            print("Loading English Word2Vec model (word2vec-google-news-300)... This might take a moment on first run.")
+            self.model = api.load("word2vec-google-news-300")
+            print("English Model loaded successfully.")
+            print("English Model loaded successfully.")
+            self._build_vocab()
+
+    def _build_vocab(self):
+        try:
+            if self.lang == 'fr':
+                nlp = spacy.load("fr_core_news_sm", disable=["ner", "parser"])
+            else:
+                nlp = spacy.load("en_core_web_sm", disable=["ner", "parser"])
+        except OSError:
+            print(f"SpaCy model for {self.lang} not found.")
+            nlp = None
+
+        raw_vocab = [word for word in self.model.index_to_key if word.isalpha() and word.islower()]
+        
+        if not nlp:
+            self.vocab = raw_vocab
+            self.target_pool = self.vocab[50:5000]
+            return
+
+        print(f"Filtering vocabulary pool for {self.lang} using SpaCy (this takes a few seconds)...")
+        self.vocab = []
+        
+        # Process the top 30,000 words. We want a rich vocab pool for hints too.
+        candidates = raw_vocab[50:30000]
+        
+        for doc in nlp.pipe(candidates, batch_size=1000):
+            if len(doc) != 1:
+                continue
+            token = doc[0]
+            pos = token.pos_
+            
+            is_valid = False
+            
+            if pos == "VERB":
+                # Infinitive verbs
+                if "Inf" in token.morph.get("VerbForm", []):
+                    is_valid = True
+            elif pos == "NOUN":
+                # Singular nouns
+                if "Plur" not in token.morph.get("Number", []):
+                    is_valid = True
+            elif pos in ["ADJ", "ADV"]:
+                # Adjectives and Adverbs (ensure not plural for French adjectives, though English adj don't have plurals)
+                if "Plur" not in token.morph.get("Number", []):
+                    is_valid = True
+                    
+            if is_valid and token.text not in self.vocab:
+                self.vocab.append(token.text)
+                
+            # Stop if we have accumulated enough valid words
+            if len(self.vocab) >= 15000:
+                break
+                
+        self.target_pool = self.vocab[:5000]
+        print(f"Filtered. Vocabulary size: {len(self.vocab)}, Target pool size: {len(self.target_pool)}")
 
     def get_random_word(self):
         return random.choice(self.target_pool)
 
     def is_valid_word(self, word):
-        return word in self.model.key_to_index
+        # We now check against the filtered vocab to enforce word rules on user input
+        return word in self.vocab
 
     def get_similarity(self, word1, word2):
         try:
@@ -53,8 +118,8 @@ class WordEmbeddingGame:
             
             for word, similarity in similar_words:
                 cleaned_word = word.lower()
-                # Skip if already guessed, or if it isn't in our clean alphabetical vocab
-                if cleaned_word in previous_guesses or not cleaned_word.isalpha() or not cleaned_word.islower():
+                # Skip if already guessed, or if it isn't in our clean filtered vocab
+                if cleaned_word in previous_guesses or cleaned_word not in self.vocab:
                     continue
                 valid_hints.append(cleaned_word)
                 
@@ -75,5 +140,58 @@ class WordEmbeddingGame:
         except KeyError:
             return None
 
-# Singleton-like instance to be imported by the Flask app
-game_instance = WordEmbeddingGame()
+    def get_crack_suggestions(self, history):
+        # Initial spread-out words to get bearing if history is empty
+        if self.lang == 'fr':
+            default_suggestions = ["espace", "animal", "technologie", "émotion", "musique", "nourriture", "couleur", "sports", "science", "politique"]
+        else:
+            default_suggestions = ["space", "animal", "technology", "emotion", "music", "food", "color", "sports", "science", "politics"]
+        
+        if not history:
+            return default_suggestions
+            
+        valid_history = []
+        for item in history:
+            word = item.get('word', '').lower()
+            try:
+                temp = float(item.get('temperature', 0))
+            except (ValueError, TypeError):
+                continue
+                
+            if self.is_valid_word(word):
+                valid_history.append({'word': word, 'temperature': temp})
+                
+        if not valid_history:
+            return default_suggestions
+        
+        guessed_words = set(h['word'] for h in valid_history)
+        
+        errors = []
+        # We search through the target pool (the top 5000 common words)
+        for candidate in self.target_pool:
+            if candidate in guessed_words:
+                continue
+                
+            mae = 0
+            for item in valid_history:
+                sim = self.get_similarity(item['word'], candidate)
+                if sim is None:
+                    # Fallback to mean error if we somehow cannot compute
+                    mae += 100 
+                else:
+                    mae += abs(sim - item['temperature'])
+                
+            errors.append((candidate, mae))
+            
+        # Sort candidates by minimum error compared to the inputs
+        errors.sort(key=lambda x: x[1])
+        
+        # Return top 10 best guesses
+        return [w[0] for w in errors[:10]]
+
+# Factory for instantiated games
+game_instances = {
+    'en': WordEmbeddingGame('en'),
+    # Fr instance is created identically but loads fr_model.kv, if it exists
+    'fr': WordEmbeddingGame('fr')
+}
