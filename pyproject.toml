@@ -1,7 +1,7 @@
 [project]
 name = "semantix-breaker"
 version = "0.1.0"
-description = "Add your description here"
+description = "A semantic word-guessing game powered by word embeddings"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = []

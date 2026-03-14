@@ -81,19 +81,26 @@ def guess_word():
 
 @app.route('/api/hint', methods=['GET'])
 def get_hint():
+    """Return a single hint word related to the current target."""
     if 'target_word' not in session:
-        return jsonify({"status": "error", "message": "No active game."}), 400
-        
+        return jsonify({
+            "status": "error",
+            "message": "No active game. Please start a new game first."
+        }), 400
+
     target = session['target_word']
     lang = session.get('lang', 'en')
     previous_guesses = session.get('guess_history', [])
-    
+
     game = game_instances.get(lang, game_instances['en'])
     hint_word = game.get_hint(target, previous_guesses)
-    
-    if not hint_word:
-        return jsonify({"status": "error", "message": "Could not generate a hint."}), 500
-        
+
+    if hint_word is None:
+        return jsonify({
+            "status": "error",
+            "message": "Could not generate a hint. Try guessing more words first."
+        }), 500
+
     return jsonify({
         "status": "success",
         "hint": hint_word

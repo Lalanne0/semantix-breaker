@@ -116,40 +116,40 @@ document.addEventListener('DOMContentLoaded', () => {
     // Handle Hint request
     hintBtn.addEventListener('click', async () => {
         if (isGameWon) return;
-        
+
         setLoadingState(true);
         hideMessage();
-        
+
         try {
-            const response = await fetch('/api/hint');
-            const data = await response.json();
-            
-            if (data.status === 'success') {
-                // We got a hint, now auto-submit it as a guess to calculate its score and add it to the list
-                const hintWord = data.hint;
-                
-                const guessResponse = await fetch('/api/guess', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ word: hintWord })
-                });
-                
-                const guessData = await guessResponse.json();
-                
-                if (guessData.status === 'success') {
-                    // Mark this guess specially as a hint
-                    addGuess(guessData.word, guessData.temperature, guessData.isMatch, true);
-                    if (guessData.isMatch) {
-                        handleVictory(guessData.word);
-                    }
-                } else {
-                    showError("Failed to apply hint.");
+            // 1. Ask the server for a hint word
+            const hintResponse = await fetch('/api/hint');
+            const hintData = await hintResponse.json();
+
+            if (hintData.status !== 'success' || !hintData.hint) {
+                showError(hintData.message || 'No hints available.');
+                return;
+            }
+
+            const hintWord = hintData.hint;
+
+            // 2. Immediately submit the hint as a guess so we get its score
+            const guessResponse = await fetch('/api/guess', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ word: hintWord })
+            });
+            const guessData = await guessResponse.json();
+
+            if (guessData.status === 'success') {
+                addGuess(guessData.word, guessData.temperature, guessData.isMatch, true);
+                if (guessData.isMatch) {
+                    handleVictory(guessData.word);
                 }
             } else {
-                showError(data.message || "No hints available.");
+                showError('Failed to apply the hint.');
             }
         } catch (error) {
-            console.error('Error fetching hint:', error);
+            console.error('Hint error:', error);
             showError('Network error while fetching hint.');
         } finally {
             setLoadingState(false);

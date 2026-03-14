@@ -9,10 +9,9 @@ RUN pip install --no-cache-dir --upgrade pip
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Pre-download the Gensim model during the build phase
-# This ensures fast startup time when running the container
-COPY src/preload_model.py ./src/
-RUN python src/preload_model.py
+# Generate the French model during build (downloads ~800 MB, extracts top 60k words)
+COPY src/extract_fr_model.py ./src/
+RUN python src/extract_fr_model.py
 
 # Copy the application code
 COPY src/ ./src/

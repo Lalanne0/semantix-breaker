@@ -149,6 +149,120 @@ button:disabled {
     box-shadow: 0 6px 20px rgba(31, 111, 235, 0.4);
 }
 
+/* ===== Menu Section ===== */
+.menu-section h2 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin-bottom: 0.3rem;
+}
+
+.menu-section > p {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+    margin-bottom: 1.5rem;
+}
+
+.menu-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.menu-option-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    padding: 1.2rem 1.5rem;
+    border-radius: 14px;
+    text-align: center;
+    width: 100%;
+    transition: all 0.3s ease;
+}
+
+.menu-option-btn .btn-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.menu-option-btn .btn-label {
+    font-size: 1.15rem;
+    font-weight: 600;
+}
+
+.menu-option-btn .btn-desc {
+    font-size: 0.8rem;
+    font-weight: 300;
+    opacity: 0.75;
+}
+
+.menu-option-btn:hover {
+    transform: translateY(-3px) scale(1.01);
+}
+
+/* Divider */
+.menu-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--panel-border), transparent);
+    margin: 1.2rem 0;
+}
+
+/* Language Selector */
+.language-selection {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    justify-content: center;
+    background: rgba(13, 17, 23, 0.5);
+    border: 1px solid var(--panel-border);
+    border-radius: 12px;
+    padding: 0.7rem 1.2rem;
+    transition: border-color 0.3s ease;
+}
+
+.language-selection:hover {
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.language-selection .lang-icon {
+    font-size: 1.3rem;
+}
+
+.language-selection label {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+    font-weight: 400;
+}
+
+.language-selection select {
+    background: rgba(30, 35, 45, 0.8);
+    color: var(--text-primary);
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    padding: 0.4rem 0.8rem;
+    font-family: 'Outfit', sans-serif;
+    font-size: 0.95rem;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    appearance: none;
+    -webkit-appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%238b949e' viewBox='0 0 16 16'%3E%3Cpath d='M1.5 5.5l6.5 6.5 6.5-6.5'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    padding-right: 2rem;
+    transition: all 0.3s ease;
+}
+
+.language-selection select:hover {
+    border-color: var(--accent-color);
+}
+
+.language-selection select:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px var(--accent-glow);
+}
+
 .message {
     margin-top: 1rem;
     padding: 0.8rem 1rem;
@@ -228,8 +342,8 @@ button:disabled {
 }
 
 .guess-card.is-hint {
-    border-color: rgba(88, 166, 255, 0.5);
-    background: rgba(31, 111, 235, 0.1);
+    border-color: rgba(88, 166, 255, 0.4);
+    background: rgba(31, 111, 235, 0.08);
 }
 
 .guess-info {

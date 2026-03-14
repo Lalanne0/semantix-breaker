@@ -25,11 +25,21 @@
                 <h2>Select Game Mode</h2>
                 <p>Choose to play normally or let the AI help you crack the game.</p>
                 <div class="menu-buttons">
-                    <button id="mode-play-btn" class="primary-btn">Play Game</button>
-                    <button id="mode-crack-btn" class="secondary-btn">Crack the Game</button>
+                    <button id="mode-play-btn" class="menu-option-btn primary-btn">
+                        <span class="btn-icon">🎮</span>
+                        <span class="btn-label">Play Game</span>
+                        <span class="btn-desc">Guess the hidden word yourself</span>
+                    </button>
+                    <button id="mode-crack-btn" class="menu-option-btn secondary-btn">
+                        <span class="btn-icon">🤖</span>
+                        <span class="btn-label">Crack the Game</span>
+                        <span class="btn-desc">Let AI find the word for you</span>
+                    </button>
                 </div>
+                <div class="menu-divider"></div>
                 <div class="language-selection">
-                    <label for="language-select">Language:</label>
+                    <span class="lang-icon">🌐</span>
+                    <label for="language-select">Language</label>
                     <select id="language-select">
                         <option value="en" selected>English</option>
                         <option value="fr">Français</option>
